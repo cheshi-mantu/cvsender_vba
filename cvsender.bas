@@ -55,6 +55,7 @@ Dim tmpArr
     'detect last filled line (row) in current (active) sheet
     lnLastLine = xlSheet.Cells(xlSheet.Rows.Count, lngColnNum).End(xlUp).Row
     'walk through found column from 1 to last row
+    frmProgress.btnClose.Enabled = False
     frmProgress.Show
     For lnCounter = 1 To lnLastLine
         If InStr(xlSheet.Cells(lnCounter, lngColnNum).Text, "@") > 1 Then
@@ -64,6 +65,8 @@ Dim tmpArr
             'Debug.Print xlSheet.Cells(lnCounter, lngColnNum).Text
         End If
     Next
+    frmProgress.txtboxProgress.Text = "all messages are sent"
+    frmProgress.btnClose.Enabled = True
 End Sub
 Public Sub checkMessage()
 'define section
