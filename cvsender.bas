@@ -45,20 +45,23 @@ Public Sub walker()
 Dim lnLastLine As Long
 Dim lnCounter As Long
 Dim strTo, strToName, strSubject, strBodyPart As String
-Dim xlActiveSheet As Worksheet
+Dim xlSheet As Worksheet
 Dim lngColnNum
 Dim tmpArr
-    Set xlActiveSheet = Application.ActiveSheet
-    
+    'Set xlSheet = Application.ActiveSheet
+    Set xlSheet = Worksheets(Application.Range("CELL_CONTACTS").Text)
     lngColnNum = findColWithEmails("email", Application.Range("CELL_CONTACTS").Text)
     
     'detect last filled line (row) in current (active) sheet
-    lnLastLine = xlActiveSheet.Cells(xlActiveSheet.Rows.Count, lngColnNum).End(xlUp).Row
+    lnLastLine = xlSheet.Cells(xlSheet.Rows.Count, lngColnNum).End(xlUp).Row
     'walk through found column from 1 to last row
+    frmProgress.Show
     For lnCounter = 1 To lnLastLine
-        If InStr(xlActiveSheet.Cells(lnCounter, lngColnNum).Text, "@") > 1 Then
-            sendEmail xlActiveSheet.Cells(lnCounter, lngColnNum).Text
-            Debug.Print xlActiveSheet.Cells(lnCounter, lngColnNum).Text
+        If InStr(xlSheet.Cells(lnCounter, lngColnNum).Text, "@") > 1 Then
+            frmProgress.txtboxProgress.Text = "Sending to " & xlSheet.Cells(lnCounter, lngColnNum).Text
+            frmProgress.Repaint
+            sendEmail xlSheet.Cells(lnCounter, lngColnNum).Text
+            'Debug.Print xlSheet.Cells(lnCounter, lngColnNum).Text
         End If
     Next
 End Sub
