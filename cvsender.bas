@@ -46,18 +46,19 @@ Dim lnLastLine As Long
 Dim lnCounter As Long
 Dim strTo, strToName, strSubject, strBodyPart As String
 Dim xlActiveSheet As Worksheet
-    
+Dim lngColnNum
+Dim tmpArr
     Set xlActiveSheet = Application.ActiveSheet
-    Debug.Print xlActiveSheet.Name
+    
+    lngColnNum = findColWithEmails("email", Application.Range("CELL_CONTACTS").Text)
+    
     'detect last filled line (row) in current (active) sheet
-    lnLastLine = xlActiveSheet.Range("F1048576").End(xlUp).Row
-    Debug.Print lnLastLine
-    'Debug.Print "last used line in " & xlActiveSheet.Name & " is " & lnLastLine
-    'Couter starts from 3rd line
+    lnLastLine = xlActiveSheet.Cells(xlActiveSheet.Rows.Count, lngColnNum).End(xlUp).Row
+    'walk through found column from 1 to last row
     For lnCounter = 1 To lnLastLine
-        If InStr(xlActiveSheet.Cells(lnCounter, 6).Text, "@") > 1 Then
-            sendEmail xlActiveSheet.Cells(lnCounter, 6).Text
-            Debug.Print xlActiveSheet.Cells(lnCounter, 6).Text
+        If InStr(xlActiveSheet.Cells(lnCounter, lngColnNum).Text, "@") > 1 Then
+            sendEmail xlActiveSheet.Cells(lnCounter, lngColnNum).Text
+            Debug.Print xlActiveSheet.Cells(lnCounter, lngColnNum).Text
         End If
     Next
 End Sub
@@ -77,11 +78,13 @@ Public Sub checkMessage()
     Dim oApp As Object
     Dim olAccount
     Dim olAccountTemp
+    Dim strCVFileNotFound
     Dim strBrowserPath As String
     Dim oNS As Object 'define outlook namespace
 'Init section
 '===============================================
  On Error Resume Next
+    strCVFileNotFound = " CV file not found by the way"
     envVar = CStr(Environ("TEMP")) 'we'll use it to build path for checker html file
     strFileName = "checking_message.html"
     'Set oApp = CreateObject("Outlook.Application")
@@ -102,9 +105,23 @@ Public Sub checkMessage()
     
     objFile.Write ("<H1>Path to the file with your CV</H1>")
     strBrowserPath = Replace(Application.Range("CV_PATH").Text, "\", "/")
+    
     Debug.Print strBrowserPath
-    objFile.Write ("<a href='file:///" + strBrowserPath + "'" + ">Check Your CV presence by following this link</a>")
+    Debug.Print objFileSys.FileExists(Application.Range("CV_PATH").Text)
+    
+    If objFSys.FileExists(Application.Range("CV_PATH").Text) Then
+        strCVFileNotFound = ""
+    End If
+    
+    
+    objFile.Write ("<a href='file:///" + strBrowserPath + "'" + "target='_blank'>Check Your CV presence by following this link</a>" + strCVFileNotFound)
+    objFile.Write ("<H1>emails will be sent from this address</H1>")
+    objFile.Write (getAccountName)
+    
     objFile.Close
+    
+    Set objShell = CreateObject("Shell.Application")
+    objShell.ShellExecute strFileName, "", "", "", 1
     
     
 'Destructs
@@ -113,4 +130,52 @@ Public Sub checkMessage()
     Set olAccount = Nothing
     Set olAccountTemp = Nothing
     Set objFSys = Nothing
+    Set objShell = Nothing
 End Sub
+Private Function getAccountName()
+    On Error Resume Next
+    Set oApp = CreateObject("Outlook.Application")
+    Set oMail = oApp.CreateItem(olMailItem)
+    Set olAccount = oApp.Account
+    Set olAccountTemp = oApp.Account
+    Dim foundAccount As Boolean
+    Dim strFrom As String
+    Dim strHTMLBody
+    
+    strFrom = Application.Range("MAIL_ACCOUNT").Text
+    foundAccount = False
+    Set olAccounts = oApp.Application.Session.Accounts
+    For Each olAccountTemp In olAccounts
+        'Debug.Print olAccountTemp.smtpAddress
+        If InStr(olAccountTemp.smtpAddress, strFrom) > 0 Then
+            Set olAccount = olAccountTemp
+            foundAccount = True
+            Exit For
+        End If
+    Next
+
+    If foundAccount Then
+        getAccountName = olAccount.smtpAddress
+    'Debug.Print olAccount.smtpAddress
+    Else
+        getAccountName = "No such account"
+    End If
+    
+    Set oApp = Nothing
+    Set oMail = Nothing
+    Set olAccounts = Nothing
+    Set olAccount = Nothing
+    Set olAccountTemp = Nothing
+    
+End Function
+Private Function findColWithEmails(strFindWord As String, strWSName As String)
+    Dim ws As Worksheet
+    Dim rngEmailCol As Range
+    Set ws = Worksheets(strWSName)
+    Set rngEmailCol = ws.Cells.Find(What:="email", After:=ws.Cells(1, 1), LookIn:=xlFormulas, LookAt:= _
+        xlPart, SearchOrder:=xlByColumns, SearchDirection:=xlPrevious, MatchCase:=False)
+        findColWithEmails = rngEmailCol.Column
+    Set ws = Nothing
+    Set rngEmailCol = Nothing
+End Function
+
